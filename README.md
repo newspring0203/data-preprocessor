@@ -27,18 +27,29 @@ python3.12 -m venv .venv
 ## Data Flow
 
 ```mermaid
-%%{init: {"themeVariables": {"background": "transparent"}, "flowchart": {"curve": "linear", "nodeSpacing": 20, "rankSpacing": 24}}}%%
-flowchart LR
-    A["<b>PDF 입력</b><br/>신고서, 재무제표"]
-    B["<b>문서 인식</b><br/>텍스트, OCR, 표 구조"]
-    C["<b>값 추출</b><br/>신고서 항목, 재무 계정"]
-    D["<b>대조 및 계산</b><br/>재무제표 연결, 세액 계산"]
-    E["<b>엑셀 저장</b><br/>파일 1개, 시트 1개"]
-    A --> B --> C --> D --> E
-    classDef default fill:transparent,stroke-width:1px
-```
+%%{init: {"themeVariables":{"background":"transparent","actorBkg":"transparent","actorBorder":"#000000","actorLineColor":"#000000","signalColor":"#000000","noteBkgColor":"transparent","noteBorderColor":"#000000","labelBoxBkgColor":"transparent","labelBoxBorderColor":"#000000","loopTextColor":"#000000"},"sequence":{"actorMargin":32,"width":126,"height":44,"boxMargin":12,"boxTextMargin":8,"noteMargin":12,"messageMargin":28,"mirrorActors":false},"themeCSS":".actor,.actor-line,.messageLine0,.messageLine1,.note,.labelBox,.loopLine{stroke:#000;stroke-width:1.5px;filter:none}.actor,.note,.labelBox{fill:transparent}.arrowheadPath,#arrowhead path{fill:#000;stroke:#000;stroke-width:1.5px}"}}%%
+sequenceDiagram
+    participant PDF as 원본 PDF
+    participant Read as 문서 인식
+    participant Cells as 셀 값 추출
+    participant Rules as 대조 및 계산
+    participant Excel as 엑셀 출력
 
-재무제표는 사업자등록번호와 회계기간으로 연결합니다. 신고서의 ㉘ 결정세액 합계에 1.1을 곱해 확정세액을 계산합니다.
+    PDF->>Read: 종합소득세 신고서, 선택 재무제표
+    alt PDF에 한글 텍스트가 있음
+        Read->>Read: pdfplumber로 글자와 좌표 추출
+    else 스캔 PDF
+        Read->>Read: PP-OCRv5로 글자 영역 탐지 및 한국어 판독
+    end
+    Read->>Read: 표 선 분석, Table Transformer로 행과 열 보완
+    Read->>Cells: 글자 좌표, 표 경계
+    Cells->>Cells: 글자를 표 셀에 배정
+    Cells->>Rules: 신고서, ㉘ 결정세액 합계, 지급자, 금액, 소득구분번호
+    Cells->>Rules: 재무제표, 사업자등록번호, 회계기간, 계정별 금액
+    Rules->>Rules: 사업자등록번호와 회계기간 대조
+    Rules->>Rules: 결정세액 × 1.1, 항목 / 금액 / 비고 구성
+    Rules->>Excel: 미리보기, XLSX 파일 1개, 시트 1개
+```
 
 ## 딥러닝 모델은 어떤 일을 하나요?
 
