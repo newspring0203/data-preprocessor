@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+models/
+*.pdf
+*.xlsx
+*.xls
+*.log
+*.onnx
+*.safetensors
+.DS_Store
